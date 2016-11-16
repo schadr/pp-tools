@@ -1,0 +1,32 @@
+#!/bin/bash
+
+if ! hash sshpass 2> /dev/null; then
+  err_msg="\nNo sshpass installed."
+fi
+
+if [ -z "${MGMT_USER}" ]; then
+  err_msg="${err_msg}\nMGMT_USER is not set."
+fi
+
+if [ -z "${MGMT_PASSWORD}" ]; then
+  err_msg="${err_msg}\nMGMT_PASSWORD is not set."
+fi
+
+if [ ! -z "${err_msg}" ]; then
+  echo $err_msg
+  echo ""
+  exit -1
+fi
+
+function join { local IFS="$1"; shift; echo "$*"; }
+
+input_clobber=`join '|' $@`
+server=`echo ${input_clobber} | awk -F'http://' '{print $2}' | awk -F'|' '{print $1}' | awk -F'/' '{print $1}' | awk -F':' '{print $1}'`
+if [ -z "$server" ]; then
+  use_keys=1
+  server=`echo ${input_clobber} | awk -F'https://' '{print $2}' | awk -F'|' '{print $1}' | awk -F'/' '{print $1}' | awk -F':' '{print $1}'`
+fi
+
+container_id=`sshpass -p ${MGMT_PASSWORD} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${MGMT_USER}@${server} "docker ps | grep controller" | awk '{print $1}'`
+sshpass -p ${MGMT_PASSWORD} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${MGMT_USER}@${server} "docker exec ${container_id} curl -Ss --cert /etc/keys/machine.crt --key /etc/keys/machine.privkey --cacert /etc/keys/cacert.crt $@"
+echo ""
