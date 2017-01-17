@@ -13,7 +13,7 @@ if [ -z "${MGMT_PASSWORD}" ]; then
 fi
 
 if [ ! -z "${err_msg}" ]; then
-  echo $err_msg
+  echo -e $err_msg
   echo ""
   exit -1
 fi
